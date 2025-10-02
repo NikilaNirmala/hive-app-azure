@@ -39,6 +39,21 @@ jobs:
         with:
           name: php-app
           path: .
+      - name: Laravel Post-Install Commands
+        run: |
+          # 1. Clear config and link storage
+          php artisan config:clear
+          php artisan storage:link
+
+      - name: Set Write Permissions for App Service User (CRITICAL FIX)
+        run: |
+          # The web server runs as a low-privilege user (often nobody/www-data).
+          # We ensure the storage and cache folders are writable by everyone (775)
+          # in case 'nobody' is not explicitly 'www-data'.
+
+          # Use a single, safe chmod command:
+          chmod -R 775 storage bootstrap/cache
+        working-directory: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -67,4 +82,5 @@ jobs:
           app-name: 'hiveapp'
           slot-name: 'Production'
           package: .
+
           
