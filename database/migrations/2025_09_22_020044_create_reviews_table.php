@@ -1,8 +1,8 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Jenssegers\Mongodb\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use MongoDB\Laravel\Schema\Blueprint as SchemaBlueprint;
 
 return new class extends Migration
 {
@@ -14,7 +14,7 @@ return new class extends Migration
     {
 
 
-        Schema::create('reviews', function (Blueprint $table) {
+        Schema::create('reviews', function (SchemaBlueprint $table) {
             $table->id();
             $table->string('title');
             $table->decimal('rating');
