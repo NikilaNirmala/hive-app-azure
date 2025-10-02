@@ -1,0 +1,4 @@
+php artisan make:controller HomeController
+php artisan make:controller MemberController
+php artisan make:controller AdminController
+php artisan make:controller AgentController
