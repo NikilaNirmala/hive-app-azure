@@ -1,3 +1,6 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
 name: Build and deploy PHP app to Azure Web App - hiveapp
 
 on:
@@ -10,7 +13,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: read #This is required for actions/checkout
 
     steps:
       - uses: actions/checkout@v4
@@ -28,47 +31,43 @@ jobs:
 
       - name: Run composer install if composer.json exists
         if: steps.check_files.outputs.files_exists == 'true'
-        run: composer validate --no-check-publish && composer install --prefer-dist --no-progress --no-dev --optimize-autoloader
+        run: composer validate --no-check-publish && composer install --prefer-dist --no-progress
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16'
-
-      - name: Install Node dependencies
-        run: npm install
-
-      - name: Build assets
-        run: npm run build
-
-      - name: Laravel Post-Install Commands (Local)
-        run: |
-          php artisan config:clear
-          php artisan storage:link
-        continue-on-error: true  # Proceed even if storage link fails (handled on App Service)
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: php-app
-          path: |
-            .
-            !node_modules  # Exclude node_modules if built locally
-            !vendor        # Exclude vendor if built locally
+          path: .
+      - name: Laravel Post-Install Commands
+        run: |
+          # 1. Clear config and link storage
+          php artisan config:clear
+          php artisan storage:link
+
+      - name: Set Write Permissions for App Service User (CRITICAL FIX)
+        run: |
+          # The web server runs as a low-privilege user (often nobody/www-data).
+          # We ensure the storage and cache folders are writable by everyone (775)
+          # in case 'nobody' is not explicitly 'www-data'.
+
+          # Use a single, safe chmod command:
+          chmod -R 775 storage bootstrap/cache
+        working-directory: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     permissions:
-      id-token: write
-      contents: read
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
           name: php-app
-
+      
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -84,20 +83,4 @@ jobs:
           slot-name: 'Production'
           package: .
 
-      - name: Laravel Post-Install Commands (App Service)
-        run: |
-          # Ensure storage and cache are writable
-          chmod -R 775 storage bootstrap/cache
-          # Re-run critical commands
-          php artisan migrate --force
-          php artisan migrate --force --database=mongodb
-          php artisan config:cache
-          php artisan route:cache
-          php artisan view:cache
-        working-directory: .
-        continue-on-error: true  # Log errors but proceed
-
-      - name: Restart App Service
-        run: az webapp restart --name hiveapp --resource-group <your-resource-group>
-        env:
-          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+          
