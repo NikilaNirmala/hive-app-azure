@@ -1,0 +1,16 @@
+# nixpacks.toml
+[phases.setup]
+nixPkgs = ['php83Packages.composer']  # Ensure Composer is available (adjust PHP version if needed, e.g., php81Packages)
+
+[phases.install]
+cmds = [
+  'pecl channel-update pecl.php.net',  # Update PECL channel
+  'pecl install mongodb',              # Install the MongoDB extension
+  'echo "extension=mongodb.so" >> /usr/local/etc/php/php.ini'  # Enable the extension in php.ini
+]
+
+[phases.build]
+cmds = ['composer install --optimize-autoloader --no-dev --no-interaction']  # Optional: Customize if needed
+
+[phases.runtime]
+nixPkgs = ['php82']  # Match your PHP version (e.g., php81 for PHP 8.1)
